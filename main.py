@@ -69,26 +69,45 @@ class BinaryTree:
         self.save_to_file("generated_tree.txt")
 
     def find_subtree_with_root(self, root_value, blocked):
+        """
+        Находит поддерево с указанным корнем, которое:
+        1. Не содержит заблокированных узлов
+        2. Не является листом (имеет хотя бы одного потомка)
+        3. Является полным поддеревом
+        """
         target_node = self._find_node_by_value(self.root, root_value)
         if target_node is None:
             print(f"Узел {root_value} не найден")
             return None
         
+        # Проверяем что это не лист
+        if target_node.left is None and target_node.right is None:
+            print(f"Узел {root_value} является листом")
+            return None
+        
+        # Проверяем на заблокированные узлы
         if not self._is_valid_subtree(target_node, blocked):
             print(f"Поддерево с корнем {root_value} содержит заблокированные узлы")
             return None
         
+        # Создаем поддерево
         subtree = BinaryTree()
         subtree.root = self._copy_subtree(target_node)
         subtree._size = self._calculate_size(subtree.root)
+        
+        # Дополнительная проверка что поддерево не стало листом после копирования
+        if subtree.root.left is None and subtree.root.right is None:
+            print(f"После удаления заблокированных узлов поддерево стало листом")
+            return None
+            
         return subtree
 
     def find_first_valid_subtree(self, blocked):
         """
-        Находит первое поддерево (в порядке обхода в ширину), которое:
-        1. Не содержит ни одного заблокированного значения
-        2. Является полным поддеревом
-        Возвращает BinaryTree или None, если такого нет
+        Находит первое поддерево (в порядке BFS), которое:
+        1. Не содержит заблокированных узлов
+        2. Не является листом
+        3. Имеет минимум 2 узла (корень + хотя бы один потомок)
         """
         if self.root is None:
             return None
@@ -97,30 +116,34 @@ class BinaryTree:
         while queue:
             current_node = queue.popleft()
             
-            # Проверяем, является ли текущий узел корнем валидного поддерева
-            if current_node.data not in blocked:
-                is_valid = True
-                validation_queue = deque([current_node])
+            # Пропускаем листья
+            if current_node.left is None and current_node.right is None:
+                continue
                 
-                # Проверяем все узлы в поддереве
-                while validation_queue and is_valid:
-                    node = validation_queue.popleft()
-                    if node.data in blocked:
-                        is_valid = False
-                        break
-                    if node.left:
-                        validation_queue.append(node.left)
-                    if node.right:
-                        validation_queue.append(node.right)
-                
-                if is_valid:
-                    # Создаем новое дерево
-                    subtree = BinaryTree()
-                    subtree.root = self._copy_subtree(current_node)
-                    subtree._size = self._calculate_size(subtree.root)
-                    return subtree
+            # Проверяем поддерево
+            is_valid = True
+            size = 0
+            validation_queue = deque([current_node])
             
-            # Добавляем потомков в очередь для поиска
+            while validation_queue and is_valid:
+                node = validation_queue.popleft()
+                if node.data in blocked:
+                    is_valid = False
+                    break
+                size += 1
+                if node.left:
+                    validation_queue.append(node.left)
+                if node.right:
+                    validation_queue.append(node.right)
+            
+            # Если поддерево валидно и не является листом
+            if is_valid and size >= 2:
+                subtree = BinaryTree()
+                subtree.root = self._copy_subtree(current_node)
+                subtree._size = size
+                return subtree
+            
+            # Добавляем потомков в очередь
             if current_node.left:
                 queue.append(current_node.left)
             if current_node.right:
@@ -128,6 +151,7 @@ class BinaryTree:
         
         return None
 
+    # Вспомогательные методы
     def _is_valid_subtree(self, node, blocked):
         if node is None:
             return True
@@ -343,28 +367,35 @@ def main():
             if current_tree is None:
                 print("Дерево не загружено!")
                 continue
-            root_value = int(input("Введите значение корня поддерева: "))
-            blocked = set(map(int, input("Введите заблокированные вершины через запятую: ").split(",")))
-            subtree = current_tree.find_subtree_with_root(root_value, blocked)
-            if subtree:
-                print(f"Найдено валидное поддерево с {subtree.get_size()} узлами")
-                if subtree.get_size() <= 100:
-                    subtree.visualize(f"Поддерево с корнем {root_value}")
-            else:
-                print("Валидное поддерево не найдено")
+            try:
+                root_value = int(input("Введите значение корня поддерева: "))
+                blocked = set(map(int, input("Введите заблокированные вершины через запятую: ").split(",")))
+                subtree = current_tree.find_subtree_with_root(root_value, blocked)
+                if subtree:
+                    print(f"Найдено валидное поддерево с {subtree.get_size()} узлами")
+                    if subtree.get_size() <= 100:
+                        subtree.visualize(f"Поддерево с корнем {root_value}")
+                else:
+                    print("Валидное поддерево не найдено")
+            except ValueError:
+                print("Ошибка ввода! Введите целые числа.")
 
         elif choice == '6':
             if current_tree is None:
                 print("Дерево не загружено!")
                 continue
-            blocked = set(map(int, input("Введите заблокированные вершины через запятую: ").split(",")))
-            subtree = current_tree.find_first_valid_subtree(blocked)
-            if subtree:
-                print(f"Найдено первое валидное поддерево с корнем {subtree.root.data} и {subtree.get_size()} узлами")
-                if subtree.get_size() <= 100:
-                    subtree.visualize(f"Валидное поддерево (корень {subtree.root.data})")
-            else:
-                print("Валидное поддерево не найдено")
+            try:
+                blocked = set(map(int, input("Введите заблокированные вершины через запятую: ").split(",")))
+                subtree = current_tree.find_first_valid_subtree(blocked)
+                if subtree:
+                    print(f"Найдено первое валидное поддерево с корнем {subtree.root.data}")
+                    print(f"Размер поддерева: {subtree.get_size()} узлов")
+                    if subtree.get_size() <= 100:
+                        subtree.visualize(f"Валидное поддерево (корень {subtree.root.data})")
+                else:
+                    print("Валидное поддерево не найдено")
+            except ValueError:
+                print("Ошибка ввода! Введите целые числа.")
 
         elif choice == '7':
             if current_tree is None:
@@ -378,7 +409,7 @@ def main():
             break
 
         else:
-            print("Некорректный ввод!")
+            print("Некорректный ввод! Выберите пункт от 1 до 8.")
 
 if __name__ == "__main__":
     main()
