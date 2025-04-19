@@ -20,7 +20,6 @@ class BinaryTree:
         return self._size
 
     def create_random_tree(self, num_nodes, none_probability=0.2):
-        start_time = time.time()
         if num_nodes <= 0:
             raise ValueError("Количество узлов должно быть положительным")
         
@@ -64,63 +63,57 @@ class BinaryTree:
                     nodes_queue.append(None)
                 current_index += 1
         
-        elapsed = (time.time() - start_time) * 1_000_000
-        print(f"Дерево создано за {elapsed:.3f} мкс")
         self.save_to_file("generated_tree.txt")
 
     def find_subtree_with_root(self, root_value, blocked):
-        """
-        Находит поддерево с указанным корнем, которое:
-        1. Не содержит заблокированных узлов
-        2. Не является листом (имеет хотя бы одного потомка)
-        3. Является полным поддеревом
-        """
+        """Поиск поддерева с заданным корнем с замером времени"""
+        start_time = time.perf_counter_ns()
+        
         target_node = self._find_node_by_value(self.root, root_value)
         if target_node is None:
-            print(f"Узел {root_value} не найден")
+            elapsed = time.perf_counter_ns() - start_time
+            print(f"Поиск занял {elapsed} нс: узел {root_value} не найден")
             return None
         
-        # Проверяем что это не лист
         if target_node.left is None and target_node.right is None:
-            print(f"Узел {root_value} является листом")
+            elapsed = time.perf_counter_ns() - start_time
+            print(f"Поиск занял {elapsed} нс: узел {root_value} является листом")
             return None
         
-        # Проверяем на заблокированные узлы
         if not self._is_valid_subtree(target_node, blocked):
-            print(f"Поддерево с корнем {root_value} содержит заблокированные узлы")
+            elapsed = time.perf_counter_ns() - start_time
+            print(f"Поиск занял {elapsed} нс: поддерево с корнем {root_value} содержит заблокированные узлы")
             return None
         
-        # Создаем поддерево
         subtree = BinaryTree()
         subtree.root = self._copy_subtree(target_node)
         subtree._size = self._calculate_size(subtree.root)
         
-        # Дополнительная проверка что поддерево не стало листом после копирования
         if subtree.root.left is None and subtree.root.right is None:
-            print(f"После удаления заблокированных узлов поддерево стало листом")
+            elapsed = time.perf_counter_ns() - start_time
+            print(f"Поиск занял {elapsed} нс: после удаления узлов поддерево стало листом")
             return None
             
+        elapsed = time.perf_counter_ns() - start_time
+        print(f"Поиск занял {elapsed} нс: найдено поддерево с {subtree._size} узлами")
         return subtree
 
     def find_first_valid_subtree(self, blocked):
-        """
-        Находит первое поддерево (в порядке BFS), которое:
-        1. Не содержит заблокированных узлов
-        2. Не является листом
-        3. Имеет минимум 2 узла (корень + хотя бы один потомок)
-        """
+        """Поиск первого валидного поддерева с замером времени"""
+        start_time = time.perf_counter_ns()
+        
         if self.root is None:
+            elapsed = time.perf_counter_ns() - start_time
+            print(f"Поиск занял {elapsed} нс: дерево пустое")
             return None
 
         queue = deque([self.root])
         while queue:
             current_node = queue.popleft()
             
-            # Пропускаем листья
             if current_node.left is None and current_node.right is None:
                 continue
                 
-            # Проверяем поддерево
             is_valid = True
             size = 0
             validation_queue = deque([current_node])
@@ -136,22 +129,24 @@ class BinaryTree:
                 if node.right:
                     validation_queue.append(node.right)
             
-            # Если поддерево валидно и не является листом
             if is_valid and size >= 2:
                 subtree = BinaryTree()
                 subtree.root = self._copy_subtree(current_node)
                 subtree._size = size
+                elapsed = time.perf_counter_ns() - start_time
+                print(f"Поиск занял {elapsed} нс: найдено поддерево с корнем {subtree.root.data}")
                 return subtree
             
-            # Добавляем потомков в очередь
             if current_node.left:
                 queue.append(current_node.left)
             if current_node.right:
                 queue.append(current_node.right)
         
+        elapsed = time.perf_counter_ns() - start_time
+        print(f"Поиск занял {elapsed} нс: валидное поддерево не найдено")
         return None
 
-    # Вспомогательные методы
+    # Остальные методы остаются без изменений
     def _is_valid_subtree(self, node, blocked):
         if node is None:
             return True
