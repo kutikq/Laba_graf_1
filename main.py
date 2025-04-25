@@ -90,6 +90,8 @@ class BinaryTree:
         2. Является полным поддеревом
         Возвращает BinaryTree или None, если такого нет
         """
+        start_time = time.perf_counter()  # Начало замера времени
+        
         if self.root is None:
             return None
 
@@ -118,6 +120,7 @@ class BinaryTree:
                     subtree = BinaryTree()
                     subtree.root = self._copy_subtree(current_node)
                     subtree._size = self._calculate_size(subtree.root)
+                    elapsed_ms = (time.perf_counter() - start_time) * 1000  # Конвертация в мс
                     return subtree
             
             # Добавляем потомков в очередь для поиска
@@ -125,8 +128,9 @@ class BinaryTree:
                 queue.append(current_node.left)
             if current_node.right:
                 queue.append(current_node.right)
-        
-        return None
+
+        elapsed_ms = (time.perf_counter() - start_time) * 1000  # Конвертация в мс
+        return (None, elapsed_ms)
 
     def _is_valid_subtree(self, node, blocked):
         if node is None:
@@ -358,13 +362,21 @@ def main():
                 print("Дерево не загружено!")
                 continue
             blocked = set(map(int, input("Введите заблокированные вершины через запятую: ").split(",")))
+            
+            # Замер времени выполнения
+            start_time = time.perf_counter()
             subtree = current_tree.find_first_valid_subtree(blocked)
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            
             if subtree:
-                print(f"Найдено первое валидное поддерево с корнем {subtree.root.data} и {subtree.get_size()} узлами")
+                print(f"Найдено первое валидное поддерево с корнем {subtree.root.data}")
+                print(f"Время поиска: {elapsed_ms:.3f} мс")
                 if subtree.get_size() <= 100:
                     subtree.visualize(f"Валидное поддерево (корень {subtree.root.data})")
+                else:
+                    print(f"Размер поддерева: {subtree.get_size()} узлов (визуализация пропущена)")
             else:
-                print("Валидное поддерево не найдено")
+                print(f"Валидное поддерево не найдено. Время поиска: {elapsed_ms:.3f} мс")
 
         elif choice == '7':
             if current_tree is None:
